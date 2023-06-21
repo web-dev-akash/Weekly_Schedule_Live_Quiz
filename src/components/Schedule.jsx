@@ -1,64 +1,103 @@
 import { useEffect, useState } from "react";
 import "../App.css";
-import { ChakraProvider } from "@chakra-ui/react";
-import {
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  TableContainer,
-} from "@chakra-ui/react";
+import { Box, Heading } from "@chakra-ui/react";
+import logo from "../assets/logo.png";
+
+import axios from "axios";
+import { Select } from "@chakra-ui/react";
 export const Schedule = () => {
   const queryParameters = new URLSearchParams(window.location.search);
   const phone = queryParameters.get("phone");
   const [data, setData] = useState({});
+  const [filteredData, setFilteredData] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
-  const day = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
+  const [subject, setSubject] = useState("");
+  const [grade, setGrade] = useState("");
+  const [studentGrade, setStudentGrade] = useState("");
+
+  const month = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   const getWeeklySchedule = async () => {
     try {
-      if (!phone || phone.length < 10) {
-        setLoading(false);
-        setError(true);
-        return;
-      }
-      setLoading(true);
-      const url = `https://wisechamps.onrender.com/getWeeklySchedule?phone=${phone}`;
-      fetch(url)
-        .then((res) => res.json())
-        .then((res) => {
-          if (
-            res.status === "error" ||
-            res.status === "User not found with this number"
-          ) {
-            setError(true);
-            setLoading(false);
+      const watiAPI = `https://live-server-105694.wati.io`;
+      const WATI_TOKEN = process.env.REACT_APP_WATI_TOKEN;
+      if (phone && phone.length >= 10) {
+        const watiConfig = {
+          headers: {
+            Authorization: `Bearer ${WATI_TOKEN}`,
+          },
+        };
+        const response = await axios.get(
+          `${watiAPI}/api/v1/getContacts?attribute=%5B%7Bname%3A%20%22phone%22%2C%20operator%3A%20%22contain%22%2C%20value%3A%20%22${phone}%22%7D%5D`,
+          watiConfig
+        );
+        if (response.data && response.data.contact_list.length > 0) {
+          console.log(response.data);
+          const res = response.data.contact_list[0].customParams;
+          for (let i = 0; i < res.length; i++) {
+            if (res[i].name === "student_grade") {
+              setStudentGrade(`Grade ${res[i].value}`);
+              break;
+            }
           }
-          const sortedData = res.data.sort((a, b) => a.time - b.time);
-          setData(sortedData);
-          setLoading(false);
-          return;
-        })
-        .catch((error) => {
-          setLoading(false);
-          setError(true);
-        });
+        }
+      }
+      const body = phone && phone.length >= 10 ? { phone: phone } : {};
+      setLoading(true);
+      const url = "https://wisechamps.onrender.com/weeklySchedule";
+      const response = await axios.post(url, body);
+      console.log(response.data);
+      const storedSchedule = response.data.data;
+      setData(storedSchedule);
+      setLoading(false);
+      return;
     } catch (error) {
       console.log(error);
+      setLoading(false);
       setError(true);
     }
   };
+
+  const updateSubject = (e) => {
+    const subjectF = e.target.value;
+    setSubject(subjectF);
+
+    const filteredData = data.filter((res) => {
+      return (
+        (subjectF === "" || res.subject === subjectF) &&
+        (grade === "" || res.grade === grade)
+      );
+    });
+    setFilteredData(filteredData);
+  };
+
+  const updateGrade = (e) => {
+    const gradeF = e.target.value;
+    setGrade(gradeF);
+    const newData = data.filter((res) => {
+      return (
+        (subject === "" || res.subject === subject) &&
+        (gradeF === "" || res.grade === gradeF)
+      );
+    });
+    setFilteredData(newData);
+  };
+
+  console.log(studentGrade);
 
   useEffect(() => {
     getWeeklySchedule();
@@ -121,40 +160,132 @@ export const Schedule = () => {
   }
 
   return (
-    <ChakraProvider>
+    <div
+      className={
+        filteredData && filteredData.length === 0 ? "overflowHidden" : ""
+      }
+    >
+      <header
+        style={{
+          padding: "0 20px",
+          margin: "20px 0",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <img src={logo} alt="logo" width={"120px"} />
+        <p
+          className="heading"
+          style={{
+            fontSize: "18px",
+            fontWeight: "600",
+            background: "#0ba732",
+            color: "white",
+            padding: "5px 8px",
+            borderRadius: "5px",
+          }}
+        >
+          Weekly Schedule
+        </p>
+      </header>
+      <Box
+        width={{ base: "90%", md: "80%", lg: "70%" }}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "20px",
+          margin: "20px auto 0px auto",
+        }}
+      >
+        <Select
+          variant="filled"
+          placeholder="Select Subject"
+          fontSize={"15px"}
+          onChange={(e) => updateSubject(e)}
+        >
+          <option value="">All Subjects</option>
+          <option value="Math">Maths</option>
+          <option value="English">English</option>
+          <option value="Science">Science</option>
+          <option value="GK">GK</option>
+        </Select>
+        <Select
+          variant="filled"
+          placeholder="Select Grade"
+          fontSize={"15px"}
+          onChange={(e) => updateGrade(e)}
+        >
+          <option value="Grade 3">Grade 3</option>
+          <option value="Grade 4">Grade 4</option>
+          <option value="Grade 5">Grade 5</option>
+          <option value="Grade 6">Grade 6</option>
+          <option value="Grade 7">Grade 7</option>
+        </Select>
+      </Box>
       <div className="weeklydata">
-        {data && data.length > 0 ? (
-          <TableContainer border={"1px solid"} borderRadius={"10px"}>
-            <Table size={{ base: "sm", md: "md", lg: "lg" }}>
-              <Thead className="tableHead">
-                <Tr>
-                  <Th>Subject</Th>
-                  <Th>Topic</Th>
-                  <Th>Date</Th>
-                  <Th>Time</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {data.map((row, index) => (
-                  <Tr key={index}>
-                    <Td>
-                      {row.subject === "Math" ? "Mathematics" : row.subject}
-                    </Td>
-                    <Td>{row.name}</Td>
-                    <Td>{day[new Date(row.time * 1000).getDay() - 1]}</Td>
-                    <Td>{new Date(row.time * 1000).toLocaleTimeString()}</Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </TableContainer>
-        ) : (
+        {filteredData && filteredData.length === 0 && (
           <div className="noSchedule">
-            <p>Schedule not available yet.</p>
-            <p>Please retry after sometime.</p>
+            <p>Schedule not available for {grade}.</p>
+          </div>
+        )}
+
+        {data && data.length > 0 && (
+          <div className="scheduleCards">
+            {(filteredData.length > 0 ? filteredData : data).map((row, index) =>
+              !studentGrade || grade === row.grade ? (
+                <div className="scheduleCard" key={index}>
+                  <div className="scheduleCardContent">
+                    <Heading
+                      as={"h4"}
+                      fontSize={{ base: "18px", md: "25px", lg: "30px" }}
+                    >
+                      {row.subject} {"  "}
+                      <span className="grade">{row.grade}</span>
+                    </Heading>
+                    <p>Topic : {row.topic}</p>
+                    <p>
+                      Day : {row.day},{" "}
+                      {`${new Date(row.timestamp * 1000).getDate()} ${
+                        month[new Date(row.timestamp * 1000).getMonth()]
+                      } ${new Date(row.timestamp * 1000).getFullYear()}`}
+                    </p>
+                    <p>Time : {row.time}</p>
+                  </div>
+                </div>
+              ) : (
+                studentGrade === row.grade && (
+                  <div className="scheduleCard" key={index}>
+                    <div className="scheduleCardContent">
+                      <Heading
+                        as={"h4"}
+                        fontSize={{ base: "18px", md: "25px", lg: "30px" }}
+                      >
+                        {row.subject} {"  "}
+                        <span className="grade">{row.grade}</span>
+                      </Heading>
+                      <p>Topic : {row.topic}</p>
+                      <p>
+                        Day : {row.day},{" "}
+                        {`${new Date(row.timestamp * 1000).getDate()} ${
+                          month[new Date(row.timestamp * 1000).getMonth()]
+                        } ${new Date(row.timestamp * 1000).getFullYear()}`}
+                      </p>
+                      <p>Time : {row.time}</p>
+                    </div>
+                  </div>
+                )
+              )
+            )}
           </div>
         )}
       </div>
-    </ChakraProvider>
+      <div className="joinNow">
+        <a href="https://wisechamps.app/" target="_blank" rel="noreferrer">
+          Join Now
+        </a>
+      </div>
+    </div>
   );
 };
