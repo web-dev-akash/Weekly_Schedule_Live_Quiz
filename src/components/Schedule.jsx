@@ -217,6 +217,7 @@ export const Schedule = () => {
           fontSize={"15px"}
           onChange={(e) => updateGrade(e)}
         >
+          <option value="Grade 2">Grade 2</option>
           <option value="Grade 3">Grade 3</option>
           <option value="Grade 4">Grade 4</option>
           <option value="Grade 5">Grade 5</option>
@@ -230,7 +231,6 @@ export const Schedule = () => {
             <p>Schedule not available for {grade}.</p>
           </div>
         )}
-
         {data && data.length > 0 && (
           <div className="scheduleCards">
             {(filteredData.length > 0 ? filteredData : data).map((row, index) =>
